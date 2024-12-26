@@ -35,7 +35,7 @@ struct UserController: RouteCollection {
     }
     
     @Sendable func getProfile(req: Request) async throws -> User {
-            guard let userID = req.parameters.get("userID", as: UUID.self) else {
+            guard let userID = req.parameters.get("id", as: UUID.self) else {
                 throw Abort(.badRequest, reason: "Missing or invalid user ID")
             }
             guard let user = try await User.find(userID, on: req.db) else {
