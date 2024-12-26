@@ -28,9 +28,9 @@ struct UserController: RouteCollection {
     /// - Parameter req: The incoming request containing the user's registration data.
     /// - Returns: The newly created `User` instance.
     /// - Throws: An error if decoding or saving the user fails.
-    @Sendable func register(req: Request) throws -> User {
+    @Sendable func register(req: Request) async throws -> User {
         let user = try req.content.decode(User.self) // Decodes the request body into a `User` model.
-        try user.save(on: req.db).wait() // Saves the user to the database.
+        try await user.save(on: req.db) // Saves the user to the database.
         return user // Returns the saved user.
     }
     
@@ -70,7 +70,7 @@ struct UserController: RouteCollection {
     /// - Parameter req: The incoming request.
     /// - Returns: An array of all `User` instances.
     /// - Throws: An error if querying the database fails.
-    @Sendable func getAllUsers(req: Request) throws -> [User] {
-        return try User.query(on: req.db).all().wait() // Queries the database to fetch all users.
+    @Sendable func getAllUsers(req: Request) async throws -> [User] {
+        return try await User.query(on: req.db).all() // Queries the database to fetch all users.
     }
 }
