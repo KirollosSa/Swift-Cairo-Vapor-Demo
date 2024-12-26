@@ -1,3 +1,12 @@
+//
+//  User.swift
+//  DemoTest
+//
+//  Created by Kirollos Saweres on 23/12/2024.
+//
+import Fluent
+import Vapor
+
 final class User: Model, Content {
     static let schema = "users" // Table name
     

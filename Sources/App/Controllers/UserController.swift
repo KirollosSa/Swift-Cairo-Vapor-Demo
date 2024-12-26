@@ -1,3 +1,11 @@
+//
+//  UserController.swift
+//  DemoTest
+//
+//  Created by Kirollos Saweres on 23/12/2024.
+//
+
+
 import Fluent
 import Vapor
 
@@ -6,33 +14,37 @@ struct UserController: RouteCollection {
         let userRoutes = routes.grouped("user")
         userRoutes.post("register", use: register)
         userRoutes.post("login", use: login)
-        userRoutes.get(":id", use: profile)
+        userRoutes.get(":id", use: getProfile)
+        userRoutes.get("all", use: getAllUsers)
     }
 
-    func register(req: Request) throws -> EventLoopFuture<User> {
+    @Sendable func register(req: Request) throws -> EventLoopFuture<User> {
         let user = try req.content.decode(User.self)
         return user.save(on: req.db).map { user }
     }
-
-    func login(req: Request) throws -> EventLoopFuture<String> {
-        let loginRequest = try req.content.decode(User.self)
-        return User.query(on: req.db)
-            .filter(\.$email == loginRequest.email)
-            .first()
-            .unwrap(or: Abort(.unauthorized))
-            .flatMapThrowing { user in
-                guard user.password == loginRequest.password else {
-                    throw Abort(.unauthorized)
-                }
-                return "Login successful"
-            }
-    }
-
-    func profile(req: Request) throws -> EventLoopFuture<User> {
-        guard let userID = req.parameters.get("id", as: UUID.self) else {
-            throw Abort(.badRequest)
+    
+    @Sendable func login(req: Request) async throws -> User {
+        let loginData = try req.content.decode(User.self)
+        guard let existingUser = try await User.query(on: req.db)
+            .filter(\.$email == loginData.email)
+            .first(),
+              existingUser.password == loginData.password else {
+            throw Abort(.unauthorized, reason: "Invalid credentials")
         }
-        return User.find(userID, on: req.db)
-            .unwrap(or: Abort(.notFound))
+        return existingUser
+    }
+    
+    @Sendable func getProfile(req: Request) async throws -> User {
+            guard let userID = req.parameters.get("userID", as: UUID.self) else {
+                throw Abort(.badRequest, reason: "Missing or invalid user ID")
+            }
+            guard let user = try await User.find(userID, on: req.db) else {
+                throw Abort(.notFound, reason: "User not found")
+            }
+            return user
+        }
+    
+    @Sendable func getAllUsers(req: Request) throws -> EventLoopFuture<[User]> {
+        return User.query(on: req.db).all()
     }
 }
