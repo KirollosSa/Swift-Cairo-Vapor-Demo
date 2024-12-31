@@ -19,7 +19,7 @@ struct UserController: RouteCollection {
         let userRoutes = routes.grouped("user") // Creates a route group with the base path "/user".
         userRoutes.post("register", use: register) // POST /user/register: Handles user registration.
         userRoutes.post("login", use: login) // POST /user/login: Handles user login.
-        userRoutes.get(":id", use: getProfile) // GET /user/:id: Retrieves a user's profile by ID.
+        userRoutes.get(use: getProfile) // GET /user/:id: Retrieves a user's profile by ID.
         userRoutes.get("all", use: getAllUsers) // GET /user/all: Fetches all users.
     }
 
@@ -55,14 +55,20 @@ struct UserController: RouteCollection {
     /// - Parameter req: The incoming request containing the user ID as a parameter.
     /// - Returns: The `User` instance corresponding to the provided ID.
     /// - Throws: An error if the ID is missing, invalid, or if the user is not found.
-    @Sendable func getProfile(req: Request) async throws -> User {
-        guard let userID = req.parameters.get("id", as: UUID.self) else {
-            throw Abort(.badRequest, reason: "Missing or invalid user ID") // Throws an error if ID is missing or invalid.
+    @Sendable func getProfile(req: Request) async throws -> APIUser {
+        // Validate and extract the user ID from the request parameters.
+        guard let userIDString = req.query[String.self, at: "id"],
+              let userID = UUID(uuidString: userIDString) else {
+            throw Abort(.badRequest, reason: "Invalid or missing user ID")
         }
+
+        // Retrieve the user from the database or throw a not found error.
         guard let user = try await User.find(userID, on: req.db) else {
-            throw Abort(.notFound, reason: "User not found") // Throws an error if the user does not exist.
+            throw Abort(.notFound, reason: "User not found")
         }
-        return user // Returns the user profile.
+
+        // Map the User model to an APIUser and return it.
+        return APIUser(id: user.id, email: user.email)
     }
     
     /// Fetches a list of all registered users.
